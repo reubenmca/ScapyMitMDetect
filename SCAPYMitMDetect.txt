@@ -1,0 +1,26 @@
+//SCAPY
+//Run in blocks
+//Code purpose to compare to the mac address of default gateway over time
+//To monitor potential presence of MitM Attack
+
+//get gateway ip
+gateway_ip = conf.route.route("0.0.0.0")[2]
+print(f"Gateway IP: {gateway_ip}")
+
+//generate arp request to get gateway MAC address
+arp_request = ARP(pdst=gateway_ip)
+broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
+arp_request_broadcast = broadcast / arp_request
+answered_list = srp(arp_request_broadcast, timeout=1, verbose=False)[0]
+gateway_mac = answered_list[0][1].hwsrc if answered_list else None
+print(f"Gateway MAC Address: {gateway_mac}")
+
+//Run this code repetitively
+//Get current gateway mac and compare to previous mac address
+//If different run alert
+current_answered_list = srp(arp_request_broadcast, timeout=1, verbose=False)[0]
+current_mac = current_answered_list[0][1].hwsrc if current_answered_list else None
+if current_mac and current_mac != gateway_mac:
+    print(f"\033[91m[*] Possible ARP spoof attack! Expected MAC: {gateway_mac}, Received MAC: {current_mac}\033[0m")
+else:
+    print(f"\033[92m[+] Gateway is {gateway_ip} at {gateway_mac}\033[0m")
